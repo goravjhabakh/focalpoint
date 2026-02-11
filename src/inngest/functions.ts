@@ -1,17 +1,16 @@
 import "pdf-parse/worker"
 import { inngest } from "./client"
 import { PDFParse } from "pdf-parse"
+import { saveParsedResume } from "@/db/resume"
 
 export const processResume = inngest.createFunction(
   { id: "process-resume" },
   { event: "resume/process" },
   async ({ event, step }) => {
-    const { fileUrl, userId } = event.data as {
+    const { fileUrl, resumeId } = event.data as {
       fileUrl: string
-      userId: string
+      resumeId: string
     }
-
-    console.log(userId)
 
     const text = await step.run("parse-pdf", async () => {
       const parser = new PDFParse({ url: fileUrl })
@@ -20,6 +19,11 @@ export const processResume = inngest.createFunction(
       return text
     })
 
-    return { text }
+    console.log("Extracted text length:", text.text.length)
+    await step.run("save-to-db", async () => {
+      return await saveParsedResume(resumeId, { rawText: text.text })
+    })
+
+    return { success: true, resumeId, textLength: text.text.length }
   }
 )
