@@ -1,3 +1,4 @@
+import { ResumeUploader } from "@/components/resume-uploader"
 import { Button } from "@/components/ui/button"
 import { auth } from "@/lib/auth"
 import { headers } from "next/headers"
@@ -19,7 +20,8 @@ const Home = async () => {
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-4">
       <h1 className="text-2xl font-bold">Focalpoint</h1>
-      <pre>{JSON.stringify(session, null, 2)}</pre>
+      <p>Welcome {session.user.name}</p>
+      <ResumeUploader />
     </div>
   )
 }
