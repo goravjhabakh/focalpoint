@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean
+  image         String?
+  createdAt     DateTime
+  updatedAt     DateTime
+  accounts      Account[]
+  resumes       Resume[]
+  sessions      Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime
+  updatedAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime
+  updatedAt             DateTime
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("account")
+}
+
+model Verification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime?
+  updatedAt  DateTime?
+
+  @@map("verification")
+}
+
+model Resume {
+  id           String                 @id @default(cuid())
+  userId       String
+  fileUrl      String
+  fileKey      String
+  fileName     String
+  rawText      String?
+  status       String                 @default("uploaded")
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  embedding    Unsupported("vector")?
+  jobMatches   JobMatch[]
+  parsedResume ParsedResume?
+  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([embedding], map: "idx_resume_embedding")
+  @@map("resume")
+}
+
+model ParsedResume {
+  id             String   @id @default(cuid())
+  resumeId       String   @unique
+  name           String?
+  email          String?
+  phone          String?
+  location       String?
+  summary        String?
+  skills         Json     @default("[]")
+  workExperience Json     @default("[]")
+  education      Json     @default("[]")
+  certifications Json     @default("[]")
+  projects       Json     @default("[]")
+  rawText        String?
+  atsScore       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  resume         Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@map("parsed_resume")
+}
+
+model Job {
+  id             String                 @id @default(cuid())
+  externalId     String?                @unique
+  title          String
+  company        String?
+  location       String?
+  description    String
+  requiredSkills Json                   @default("[]")
+  salaryMin      Int?
+  salaryMax      Int?
+  source         String                 @default("csv")
+  sourceUrl      String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  embedding      Unsupported("vector")?
+  jobMatches     JobMatch[]
+
+  @@index([embedding], map: "idx_job_embedding")
+  @@map("job")
+}
+
+model JobMatch {
+  id          String   @id @default(cuid())
+  resumeId    String
+  jobId       String
+  similarity  Float
+  gapAnalysis Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resume      Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@unique([resumeId, jobId])
+  @@map("job_match")
+}
